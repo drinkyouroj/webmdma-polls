@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import { copyFileSync, existsSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Get current directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Colors for console output
 const colors = {
@@ -17,12 +22,12 @@ const colors = {
 console.log(`${colors.bright}${colors.blue}=== WebMDMA Polls Setup ===${colors.reset}\n`);
 
 // Check if .env.local exists, if not create it from .env.example
-const envExamplePath = path.join(process.cwd(), '.env.example');
-const envLocalPath = path.join(process.cwd(), '.env.local');
+const envExamplePath = join(process.cwd(), '.env.example');
+const envLocalPath = join(process.cwd(), '.env.local');
 
-if (!fs.existsSync(envLocalPath) && fs.existsSync(envExamplePath)) {
+if (!existsSync(envLocalPath) && existsSync(envExamplePath)) {
   console.log(`${colors.cyan}Creating .env.local from .env.example...${colors.reset}`);
-  fs.copyFileSync(envExamplePath, envLocalPath);
+  copyFileSync(envExamplePath, envLocalPath);
   console.log(`${colors.green}✓ Created .env.local${colors.reset}`);
   console.log(`${colors.yellow}⚠ Don't forget to update your Supabase credentials in .env.local${colors.reset}\n`);
 }
