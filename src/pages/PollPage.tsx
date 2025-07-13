@@ -440,100 +440,104 @@ const PollPage = () => {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:space-x-6">
-        <div className="md:w-1/2">
-          <div className="space-y-2">
-            {options.map((option) => {
-              const voteCount = votes.filter(vote => vote.option_id === option.id).length;
-              const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+      <table className="w-full">
+        <tbody>
+          <tr>
+            <td className="align-top w-1/2 pr-4">
+              <div className="space-y-2">
+                {options.map((option) => {
+                  const voteCount = votes.filter(vote => vote.option_id === option.id).length;
+                  const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                  
+                  return (
+                    <div key={option.id} className="flex items-center">
+                      <input
+                        type="radio"
+                        id={option.id}
+                        name="poll-option"
+                        value={option.id}
+                        checked={selectedOption === option.id}
+                        onChange={() => setSelectedOption(option.id)}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                        disabled={votingLoading || (anonymousVoted && !user) || isPollClosed}
+                      />
+                      <label htmlFor={option.id} className="ml-2 block font-medium text-gray-700 dark:text-gray-300">
+                        {option.text}
+                      </label>
+                      <div className="ml-auto flex items-center">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white mr-2">
+                          {percentage}%
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          ({voteCount})
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               
-              return (
-                <div key={option.id} className="flex items-center">
-                  <input
-                    type="radio"
-                    id={option.id}
-                    name="poll-option"
-                    value={option.id}
-                    checked={selectedOption === option.id}
-                    onChange={() => setSelectedOption(option.id)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                    disabled={votingLoading || (anonymousVoted && !user) || isPollClosed}
-                  />
-                  <label htmlFor={option.id} className="ml-2 block font-medium text-gray-700 dark:text-gray-300">
-                    {option.text}
-                  </label>
-                  <div className="ml-auto flex items-center">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white mr-2">
-                      {percentage}%
+              {!isPollClosed && (
+                <button
+                  onClick={handleVote}
+                  className="btn btn-primary w-full mt-4"
+                  disabled={votingLoading || !selectedOption || (anonymousVoted && !user)}
+                >
+                  {votingLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Submitting...
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({voteCount})
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          {!isPollClosed && (
-            <button
-              onClick={handleVote}
-              className="btn btn-primary w-full mt-4"
-              disabled={votingLoading || !selectedOption || (anonymousVoted && !user)}
-            >
-              {votingLoading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Submitting...
-                </span>
-              ) : userVote || anonymousVoted ? 'Change Vote' : 'Vote'}
-            </button>
-          )}
-          
-          {!user && (
-            <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
-              You can vote without an account, but you'll need to <a href="/login" className="text-primary-600 hover:text-primary-500 dark:text-primary-400">sign in</a> to comment.
-            </p>
-          )}
-        </div>
-        
-        <div className="md:w-1/2 mt-6 md:mt-0">
-          <div className="flex justify-center items-center">
-            <div style={{ maxWidth: '180px', maxHeight: '180px' }} className="mx-auto">
-              <Pie 
-                data={chartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: true,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        boxWidth: 8,
-                        padding: 6,
-                        font: {
-                          size: 10
+                  ) : userVote || anonymousVoted ? 'Change Vote' : 'Vote'}
+                </button>
+              )}
+              
+              {!user && (
+                <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                  You can vote without an account, but you'll need to <a href="/login" className="text-primary-600 hover:text-primary-500 dark:text-primary-400">sign in</a> to comment.
+                </p>
+              )}
+            </td>
+            
+            <td className="align-top w-1/2 pl-4">
+              <div className="flex justify-center items-center">
+                <div style={{ width: '180px', height: '180px' }} className="mx-auto">
+                  <Pie 
+                    data={chartData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: true,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: {
+                            boxWidth: 8,
+                            padding: 6,
+                            font: {
+                              size: 10
+                            }
+                          }
+                        },
+                        tooltip: {
+                          bodyFont: {
+                            size: 10
+                          },
+                          titleFont: {
+                            size: 10
+                          }
                         }
                       }
-                    },
-                    tooltip: {
-                      bodyFont: {
-                        size: 10
-                      },
-                      titleFont: {
-                        size: 10
-                      }
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+                    }}
+                  />
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {poll.allow_comments && (
         <div className="card mt-8">
