@@ -74,28 +74,40 @@ const CreatePollPage = () => {
         .single();
 
       if (pollError) {
-        throw pollError;
+        console.error('Poll creation error:', pollError);
+        toast.error(`Failed to create poll: ${pollError.message || pollError.details || 'Unknown error'}`);
+        setIsSubmitting(false);
+        return;
       }
 
       // Insert the options
-      const optionsToInsert = data.options.map(option => ({
-        poll_id: pollData.id,
-        text: option.text
-      }));
+      const optionsToInsert = data.options
+        .filter(option => option.text.trim())
+        .map(option => ({
+          poll_id: pollData.id,
+          text: option.text.trim()
+        }));
 
       const { error: optionsError } = await supabase
         .from('options')
         .insert(optionsToInsert);
 
       if (optionsError) {
-        throw optionsError;
+        console.error('Options creation error:', optionsError);
+        toast.error(`Failed to create poll options: ${optionsError.message || optionsError.details || 'Unknown error'}`);
+        
+        // Try to clean up the poll since options failed
+        await supabase.from('polls').delete().eq('id', pollData.id);
+        
+        setIsSubmitting(false);
+        return;
       }
 
       toast.success('Poll created successfully!');
-      navigate(`/polls/${pollData.id}`);
+      navigate(`/poll/${pollData.id}`);
     } catch (error) {
-      toast.error('Failed to create poll');
-      console.error('Error creating poll:', error);
+      console.error('Unexpected error during poll creation:', error);
+      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
