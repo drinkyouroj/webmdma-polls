@@ -7,6 +7,7 @@ import { Database } from '@/lib/supabase/database.types';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { FiMessageSquare } from 'react-icons/fi';
+import { setCookie, getCookie, hasCookie } from '@/utils/cookieUtils';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -31,6 +32,7 @@ const PollPage = () => {
   const [loading, setLoading] = useState(true);
   const [votingLoading, setVotingLoading] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [anonymousVoted, setAnonymousVoted] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -83,19 +85,18 @@ const PollPage = () => {
             setUserVote(userVoteData.option_id);
             setSelectedOption(userVoteData.option_id);
           }
+        } else {
+          // Check if anonymous user has voted on this poll
+          const hasVoted = hasCookie(`poll_vote_${id}`);
+          setAnonymousVoted(hasVoted);
         }
 
         // Fetch comments if allowed
         if (pollData.allow_comments) {
+          // First, fetch comments
           const { data: commentsData, error: commentsError } = await supabase
             .from('comments')
-            .select(`
-              *,
-              profiles:user_id (
-                username,
-                avatar_url
-              )
-            `)
+            .select('*')
             .eq('poll_id', id)
             .order('created_at', { ascending: false });
 
@@ -103,7 +104,40 @@ const PollPage = () => {
             throw commentsError;
           }
 
-          setComments(commentsData as Comment[]);
+          if (commentsData && commentsData.length > 0) {
+            // Get unique user IDs from comments
+            const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
+            
+            // Fetch profiles for those users
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, username, avatar_url')
+              .in('id', userIds);
+              
+            // Create a map of profiles by user ID for quick lookup
+            const profilesMap = new Map();
+            if (profilesData) {
+              profilesData.forEach(profile => {
+                profilesMap.set(profile.id, profile);
+              });
+            }
+            
+            // Map profiles to comments
+            const commentsWithProfiles = commentsData.map(comment => {
+              const profile = profilesMap.get(comment.user_id);
+              
+              return {
+                ...comment,
+                profiles: profile 
+                  ? { username: profile.username, avatar_url: profile.avatar_url }
+                  : { username: 'Guest Voter', avatar_url: null }
+              };
+            });
+            
+            setComments(commentsWithProfiles as Comment[]);
+          } else {
+            setComments([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching poll data:', error);
@@ -144,18 +178,36 @@ const PollPage = () => {
           // Need to fetch the complete comment with profile info
           supabase
             .from('comments')
-            .select(`
-              *,
-              profiles:user_id (
-                username,
-                avatar_url
-              )
-            `)
+            .select('*')
             .eq('id', payload.new.id)
             .single()
-            .then(({ data }) => {
-              if (data) {
-                setComments(current => [data as Comment, ...current]);
+            .then(({ data: commentData }) => {
+              if (commentData) {
+                // Fetch the profile for this comment
+                supabase
+                  .from('profiles')
+                  .select('id, username, avatar_url')
+                  .eq('id', commentData.user_id)
+                  .single()
+                  .then(({ data: profileData }) => {
+                    const commentWithProfile = {
+                      ...commentData,
+                      profiles: profileData
+                        ? { username: profileData.username, avatar_url: profileData.avatar_url }
+                        : { username: 'Guest Voter', avatar_url: null }
+                    };
+                    
+                    setComments(current => [commentWithProfile as Comment, ...current]);
+                  })
+                  .catch(() => {
+                    // Handle case where profile doesn't exist
+                    const commentWithProfile = {
+                      ...commentData,
+                      profiles: { username: 'Guest Voter', avatar_url: null }
+                    };
+                    
+                    setComments(current => [commentWithProfile as Comment, ...current]);
+                  });
               }
             });
         } else if (payload.eventType === 'DELETE') {
@@ -171,11 +223,6 @@ const PollPage = () => {
   }, [id, user]);
 
   const handleVote = async () => {
-    if (!user) {
-      toast.error('Please login to vote');
-      return;
-    }
-
     if (!selectedOption) {
       toast.error('Please select an option');
       return;
@@ -188,34 +235,77 @@ const PollPage = () => {
 
     setVotingLoading(true);
     try {
-      // If user already voted, delete the previous vote
-      if (userVote) {
-        const { error: deleteError } = await supabase
-          .from('votes')
-          .delete()
-          .eq('poll_id', id)
-          .eq('user_id', user.id);
+      if (user) {
+        // Authenticated user flow
+        // If user already voted, delete the previous vote
+        if (userVote) {
+          const { error: deleteError } = await supabase
+            .from('votes')
+            .delete()
+            .eq('poll_id', id)
+            .eq('user_id', user.id);
 
-        if (deleteError) {
-          throw deleteError;
+          if (deleteError) {
+            throw deleteError;
+          }
         }
+
+        // Insert the new vote
+        const { error: insertError } = await supabase
+          .from('votes')
+          .insert({
+            poll_id: id!,
+            option_id: selectedOption,
+            user_id: user.id
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        setUserVote(selectedOption);
+      } else {
+        // Unauthenticated user flow
+        // Check if they've already voted on this poll
+        if (anonymousVoted) {
+          toast.error('You have already voted on this poll');
+          return;
+        }
+
+        // Generate a random ID for anonymous user
+        const anonymousId = `anon_${Math.random().toString(36).substring(2, 15)}`;
+        
+        // Insert the vote
+        const { error: insertError } = await supabase
+          .from('votes')
+          .insert({
+            poll_id: id!,
+            option_id: selectedOption,
+            user_id: anonymousId
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        // Set cookie to prevent double voting
+        setCookie(`poll_vote_${id}`, selectedOption, 365); // Cookie lasts for 1 year
+        setAnonymousVoted(true);
       }
 
-      // Insert the new vote
-      const { error: insertError } = await supabase
-        .from('votes')
-        .insert({
-          poll_id: id!,
-          option_id: selectedOption,
-          user_id: user.id
-        });
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      setUserVote(selectedOption);
       toast.success('Vote recorded successfully!');
+      
+      // Refresh votes to update the UI
+      const { data: votesData, error: votesError } = await supabase
+        .from('votes')
+        .select('*')
+        .eq('poll_id', id);
+
+      if (votesError) {
+        throw votesError;
+      }
+
+      setVotes(votesData);
     } catch (error) {
       console.error('Error voting:', error);
       toast.error('Failed to record vote');
@@ -381,7 +471,7 @@ const PollPage = () => {
                         checked={selectedOption === option.id}
                         onChange={() => setSelectedOption(option.id)}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                        disabled={votingLoading || !user}
+                        disabled={votingLoading || (anonymousVoted && !user)}
                       />
                       <label htmlFor={option.id} className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {option.text}
@@ -397,9 +487,9 @@ const PollPage = () => {
               <button
                 onClick={handleVote}
                 className="btn btn-primary w-full"
-                disabled={votingLoading || !user || !selectedOption}
+                disabled={votingLoading || !selectedOption || (anonymousVoted && !user)}
               >
-                {votingLoading ? 'Submitting...' : userVote ? 'Change Vote' : 'Vote'}
+                {votingLoading ? 'Submitting...' : userVote || anonymousVoted ? 'Change Vote' : 'Vote'}
               </button>
               
               {!user && (
