@@ -105,3 +105,22 @@
 .avatar-lg {
   @apply h-16 w-16;
 }
+
+/* GitHub icon specific styling - more aggressive approach */
+footer a[href*="github.com"] svg {
+  width: 14px !important;
+  height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  transform: scale(0.5) !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+}
+
+/* Hide the GitHub icon completely if needed */
+/*
+footer a[href*="github.com"] svg {
+  display: none !important;
+}
+*/
