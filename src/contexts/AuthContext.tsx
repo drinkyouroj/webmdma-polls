@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { Database } from '@/lib/supabase/database.types';
+import { generateUsername } from '../utils/usernameGenerator';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -75,6 +76,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Error fetching profile:', error);
+      
+      // If profile doesn't exist, create one
+      if (error.code === 'PGRST116') {
+        const { data: userData } = await supabase.auth.getUser();
+        // Generate a fun username instead of a generic one
+        const username = userData.user?.user_metadata?.username || generateUsername();
+        
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            username: username,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('*')
+          .single();
+          
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          // Continue without a profile
+        } else {
+          setProfile(newProfile);
+          setLoading(false);
+          return;
+        }
+      }
     } else {
       setProfile(data);
     }
@@ -92,15 +120,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, username: string) => {
+    // If no username is provided, generate one
+    const finalUsername = username || generateUsername();
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          username,
+          username: finalUsername,
         },
       },
     });
+    
+    // Create a profile for the new user
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          username: finalUsername,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
+      if (profileError) {
+        console.error('Error creating profile during signup:', profileError);
+      }
+    }
     
     return { data: data.session, error };
   };
