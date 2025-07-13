@@ -125,20 +125,21 @@ const CreatePollPage = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create a New Poll</h1>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Create a New Poll</h1>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="card">
+          <h2 className="card-header">Poll Details</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="title" className="form-label">
                 Poll Title*
               </label>
               <input
                 id="title"
                 type="text"
-                className="input w-full"
+                className="form-input"
                 placeholder="Ask a question..."
                 {...register('title', { 
                   required: 'Title is required',
@@ -149,18 +150,18 @@ const CreatePollPage = () => {
                 })}
               />
               {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+                <p className="form-error">{errors.title.message}</p>
               )}
             </div>
             
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="description" className="form-label">
                 Description (optional)
               </label>
               <textarea
                 id="description"
                 rows={3}
-                className="input w-full"
+                className="form-input"
                 placeholder="Provide more context about your poll..."
                 {...register('description', { 
                   maxLength: {
@@ -170,21 +171,21 @@ const CreatePollPage = () => {
                 })}
               />
               {errors.description && (
-                <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                <p className="form-error">{errors.description.message}</p>
               )}
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Poll Options*</h2>
+        <div className="card">
+          <h2 className="card-header">Poll Options*</h2>
           
           <div className="space-y-3">
             {fields.map((field, index) => (
               <div key={field.id} className="flex items-center space-x-2">
                 <input
                   type="text"
-                  className="input flex-grow"
+                  className="form-input"
                   placeholder={`Option ${index + 1}`}
                   {...register(`options.${index}.text` as const, {
                     required: 'Option text is required'
@@ -194,7 +195,7 @@ const CreatePollPage = () => {
                   <button
                     type="button"
                     onClick={() => remove(index)}
-                    className="p-2 text-red-500 hover:text-red-700"
+                    className="p-2 text-error hover:text-red-700 transition-colors"
                     aria-label="Remove option"
                   >
                     <FiTrash2 />
@@ -206,19 +207,19 @@ const CreatePollPage = () => {
             <button
               type="button"
               onClick={() => append({ text: '' })}
-              className="flex items-center text-primary-600 hover:text-primary-700 mt-2"
+              className="btn btn-outline btn-sm btn-icon mt-3"
             >
               <FiPlus className="mr-1" /> Add Option
             </button>
           </div>
           
           {errors.options && (
-            <p className="mt-2 text-sm text-red-600">At least two options are required</p>
+            <p className="form-error mt-2">At least two options are required</p>
           )}
         </div>
         
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Poll Settings</h2>
+        <div className="card">
+          <h2 className="card-header">Poll Settings</h2>
           
           <div className="space-y-4">
             <div className="flex items-center">
@@ -246,13 +247,13 @@ const CreatePollPage = () => {
             </div>
             
             <div>
-              <label htmlFor="closes_at" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="closes_at" className="form-label">
                 Poll Closing Date (optional)
               </label>
               <input
                 id="closes_at"
                 type="datetime-local"
-                className="input w-full"
+                className="form-input"
                 {...register('closes_at')}
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -262,13 +263,28 @@ const CreatePollPage = () => {
           </div>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn btn-outline"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             className="btn btn-primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating Poll...' : 'Create Poll'}
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating Poll...
+              </span>
+            ) : 'Create Poll'}
           </button>
         </div>
       </form>

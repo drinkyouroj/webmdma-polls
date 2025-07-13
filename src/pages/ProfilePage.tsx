@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router-dom';
+import { FiUser, FiLink, FiSave } from 'react-icons/fi';
 
 type FormData = {
   username: string;
@@ -62,43 +63,56 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Your Profile</h1>
       
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
-        <div className="flex items-center mb-4">
+      <div className="card mb-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile?.avatar_url ? (
-            <img 
-              src={profile.avatar_url} 
-              alt={profile.username} 
-              className="h-16 w-16 rounded-full object-cover mr-4"
-            />
+            <div className="avatar-container">
+              <img 
+                src={profile.avatar_url} 
+                alt={profile.username} 
+                className="avatar-lg"
+              />
+            </div>
           ) : (
-            <div className="h-16 w-16 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center mr-4">
-              <span className="text-xl font-bold text-primary-700 dark:text-primary-300">
-                {profile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-              </span>
+            <div className="avatar-container">
+              <div className="avatar-lg bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">
+                  {profile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                </span>
+              </div>
             </div>
           )}
-          <div>
-            <h2 className="text-xl font-semibold">{profile?.username}</h2>
+          <div className="text-center md:text-left">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{profile?.username}</h2>
             <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
+            <div className="mt-3">
+              <span className="badge badge-primary">Member</span>
+              {profile?.created_at && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 block mt-2">
+                  Joined {new Date(profile.created_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
       
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Edit Profile</h2>
+      <div className="card">
+        <h2 className="card-header">Edit Profile</h2>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Username
+          <div className="form-group">
+            <label htmlFor="username" className="form-label flex items-center gap-1">
+              <FiUser className="text-gray-500" /> Username
             </label>
             <input
               id="username"
               type="text"
-              className="input w-full"
+              className="form-input"
+              placeholder="Your username"
               {...register('username', { 
                 required: 'Username is required',
                 minLength: {
@@ -116,33 +130,50 @@ const ProfilePage = () => {
               })}
             />
             {errors.username && (
-              <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+              <p className="form-error">{errors.username.message}</p>
             )}
           </div>
           
-          <div>
-            <label htmlFor="avatar_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Avatar URL (optional)
+          <div className="form-group">
+            <label htmlFor="avatar_url" className="form-label flex items-center gap-1">
+              <FiLink className="text-gray-500" /> Avatar URL (optional)
             </label>
             <input
               id="avatar_url"
               type="url"
-              className="input w-full"
+              className="form-input"
               placeholder="https://example.com/avatar.jpg"
               {...register('avatar_url')}
             />
             {errors.avatar_url && (
-              <p className="mt-1 text-sm text-red-600">{errors.avatar_url.message}</p>
+              <p className="form-error">{errors.avatar_url.message}</p>
             )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Enter a URL to an image that will be used as your profile picture
+            </p>
           </div>
           
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isUpdating}
-          >
-            {isUpdating ? 'Updating...' : 'Update Profile'}
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="btn btn-primary btn-icon"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <FiSave className="mr-2" /> Update Profile
+                </span>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
