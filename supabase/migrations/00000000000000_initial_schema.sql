@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS public.comments (
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 
 -- Set up Row Level Security (RLS)
